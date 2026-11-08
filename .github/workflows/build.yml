@@ -1,0 +1,32 @@
+name: Build
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure
+        run: cmake -B build -DHUM_BUILD_SMOKE_TEST=ON
+
+      - name: Build plugin, standalone app and tests
+        run: cmake --build build --config Release --target HumToMidi_VST3 HumToMidi_Standalone HumDspTests HumProcessorSmoke
+
+      - name: Run tests
+        run: ctest --test-dir build -C Release --output-on-failure
+
+      - name: Collect files
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
+          Copy-Item -Recurse build/HumToMidi_artefacts/Release/VST3/HumToMidi.vst3 dist/HumToMidi.vst3
+          Copy-Item build/HumToMidi_artefacts/Release/Standalone/HumToMidi.exe dist/HumToMidi.exe
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: HumToMidi-Windows
+          path: dist
